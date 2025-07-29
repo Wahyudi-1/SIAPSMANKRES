@@ -551,11 +551,26 @@ async function handleSiswaFileSelect(event) {
                 return showStatusMessage('Tidak ada data siswa yang valid untuk diimpor setelah memfilter baris kosong.', 'info');
             }
 
-            const { error } = await supabase.from('siswa').insert(dataToInsert, { upsert: true });
+           // Di dalam fungsi handleSiswaFileSelect, di dalam 'complete:'
+
+            // ... (kode .filter() dan .map() tetap sama) ...
+            
+            // ========== PERBAIKI BARIS DI BAWAH INI ==========
+            const { error } = await supabase
+                .from('siswa')
+                .upsert(dataToInsert, { onConflict: 'nisn' });
+            // ========== AKHIR DARI PERBAIKAN ==========
+            
             showLoading(false);
+            
             if (error) {
+                // Kita bisa tambahkan penanganan error yang lebih spesifik jika mau
+                if (error.message.includes('violates unique constraint')) {
+                     return showStatusMessage(`Gagal Impor: Terdapat NISN duplikat di dalam file CSV Anda.`, 'error');
+                }
                 return showStatusMessage(`Gagal Impor: ${error.message}`, 'error');
             }
+            
             showStatusMessage(`${dataToInsert.length} data siswa berhasil diimpor/diperbarui!`, 'success');
             await loadSiswaAndRenderTable(true);
         },
