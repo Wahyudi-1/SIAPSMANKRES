@@ -533,10 +533,31 @@ async function handleSiswaFileSelect(event) {
                 showLoading(false);
                 return showStatusMessage('File CSV kosong atau formatnya salah.', 'error');
             }
-            const dataToInsert = results.data.map(row => ({
-                nisn: row.NISN, nama: row.Nama, kelas: row.Kelas,
-                whatsapp_ortu: row['Whatsapp Ortu'] || row.WhatsappOrtu || null
-            }));
+            const dataToInsert = data
+                // ========== TAMBAHKAN FILTER INI ==========
+                .filter(row => {
+                    const nisn = row.NISN || row.Nisn || row.nisn;
+                    return nisn && nisn.trim() !== ''; // Hanya proses baris yang NISN-nya tidak kosong
+                })
+                // ========== AKHIR DARI TAMBAHAN ==========
+                .map(row => ({
+                    nisn: row.NISN || row.Nisn || row.nisn,
+                    nama: row.Nama || row.nama,
+                    kelas: row.Kelas || row.kelas,
+                    whatsapp_ortu: row['Whatsapp Ortu'] || row.WhatsappOrtu || row.whatsapp_ortu || null
+                }));
+            //const dataToInsert = results.data.map(row => ({
+                // nisn: row.NISN, nama: row.Nama, kelas: row.Kelas,
+              //  whatsapp_ortu: row['Whatsapp Ortu'] || row.WhatsappOrtu || null
+           // }));
+            // Pastikan ada data yang tersisa setelah difilter
+                if (dataToInsert.length === 0) {
+                    showLoading(false);
+                    return showStatusMessage('Tidak ada data siswa yang valid untuk diimpor setelah memfilter baris kosong.', 'info');
+                }
+                
+                // Kirim data ke Supabase
+                const { error } = await supabase.from('siswa').insert(dataToInsert, { upsert: true });
             const { error } = await supabase.from('siswa').insert(dataToInsert, { upsert: true });
             showLoading(false);
             if (error) return showStatusMessage(`Gagal impor: ${error.message}`, 'error');
